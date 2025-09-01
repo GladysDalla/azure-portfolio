@@ -25,10 +25,16 @@ terraform {
   }
 }
 
-# Configure the Microsoft Azure Provider
+# Configure the Microsoft Azure Provider with Service Principal Authentication
 provider "azurerm" {
   features {}
- 
+  
+  # Service Principal Authentication - using environment variables
+  client_id       = var.client_id       # ARM_CLIENT_ID
+  client_secret   = var.client_secret   # ARM_CLIENT_SECRET
+  tenant_id       = var.tenant_id       # ARM_TENANT_ID
+  subscription_id = var.subscription_id # ARM_SUBSCRIPTION_ID
+  
   # Disable automatic resource provider registration if you don't have permissions
   skip_provider_registration = true
 }

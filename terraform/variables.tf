@@ -1,31 +1,43 @@
-# variables.tf - Terraform Variables
+# Azure Authentication Variables
+variable "client_id" {
+  description = "Azure Service Principal Client ID"
+  type        = string
+  sensitive   = true
+}
 
+variable "client_secret" {
+  description = "Azure Service Principal Client Secret"
+  type        = string
+  sensitive   = true
+}
+
+variable "tenant_id" {
+  description = "Azure Tenant ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "subscription_id" {
+  description = "Azure Subscription ID"
+  type        = string
+  sensitive   = true
+}
+
+# Existing Variables (keep your existing ones)
 variable "resource_group_name" {
   description = "Name of the resource group"
   type        = string
-  default     = "AzureResumeRG-Terraform"
-}
-
-variable "location" {
-  description = "Azure region for resources"
-  type        = string
-  default     = "East US 2"
+  default     = "azure-resume-rg"
 }
 
 variable "project_name" {
-  description = "Name of the project (used in resource naming)"
+  description = "Name of the project"
   type        = string
   default     = "azure-resume"
 }
 
-variable "environment" {
-  description = "Environment name (dev, staging, prod)"
-  type        = string
-  default     = "production"
-}
-
 variable "storage_account_tier" {
-  description = "Storage account performance tier"
+  description = "Storage account tier"
   type        = string
   default     = "Standard"
 }
@@ -37,64 +49,40 @@ variable "storage_replication_type" {
 }
 
 variable "function_app_sku" {
-  description = "Function App service plan SKU"
+  description = "Function app SKU"
   type        = string
   default     = "Y1"
+}
+
+variable "log_analytics_retention_days" {
+  description = "Log analytics retention days"
+  type        = number
+  default     = 30
+}
+
+variable "key_vault_soft_delete_retention_days" {
+  description = "Key vault soft delete retention days"
+  type        = number
+  default     = 7
 }
 
 variable "cosmos_consistency_level" {
   description = "Cosmos DB consistency level"
   type        = string
-  default     = "BoundedStaleness"
-  validation {
-    condition = contains([
-      "BoundedStaleness",
-      "Eventual",
-      "Session",
-      "Strong",
-      "ConsistentPrefix"
-    ], var.cosmos_consistency_level)
-    error_message = "Cosmos DB consistency level must be one of: BoundedStaleness, Eventual, Session, Strong, ConsistentPrefix."
-  }
+  default     = "Session"
 }
 
 variable "cosmos_throughput" {
-  description = "Cosmos DB container throughput (RU/s)"
+  description = "Cosmos DB throughput"
   type        = number
   default     = 400
-  validation {
-    condition     = var.cosmos_throughput >= 400 && var.cosmos_throughput <= 1000000
-    error_message = "Cosmos DB throughput must be between 400 and 1,000,000 RU/s."
-  }
-}
-
-variable "key_vault_soft_delete_retention_days" {
-  description = "Key Vault soft delete retention period in days"
-  type        = number
-  default     = 7
-  validation {
-    condition     = var.key_vault_soft_delete_retention_days >= 7 && var.key_vault_soft_delete_retention_days <= 90
-    error_message = "Key Vault soft delete retention days must be between 7 and 90."
-  }
-}
-
-variable "log_analytics_retention_days" {
-  description = "Log Analytics workspace retention period in days"
-  type        = number
-  default     = 30
-  validation {
-    condition     = var.log_analytics_retention_days >= 30 && var.log_analytics_retention_days <= 730
-    error_message = "Log Analytics retention days must be between 30 and 730."
-  }
 }
 
 variable "tags" {
-  description = "Common tags for all resources"
+  description = "Tags to apply to resources"
   type        = map(string)
   default = {
-    project     = "azure-resume"
-    environment = "production"
-    managed-by  = "terraform"
-    purpose     = "portfolio-website"
+    Environment = "dev"
+    Project     = "azure-resume"
   }
 }
