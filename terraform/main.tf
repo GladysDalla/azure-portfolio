@@ -35,8 +35,8 @@ provider "azurerm" {
   tenant_id       = var.tenant_id       # ARM_TENANT_ID
   subscription_id = var.subscription_id # ARM_SUBSCRIPTION_ID
   
-  # Disable automatic resource provider registration if you don't have permissions
-  skip_provider_registration = true
+  # Allow automatic resource provider registration
+  skip_provider_registration = false
 }
 
 # Random string for unique resource names (only where globally unique names are required)
@@ -73,6 +73,7 @@ resource "azurerm_application_insights" "resume_insights" {
   resource_group_name = data.azurerm_resource_group.main.name
   location            = data.azurerm_resource_group.main.location
   application_type    = "web"
+  workspace_id        = azurerm_log_analytics_workspace.resume_workspace.id
 
   tags = var.tags
 }
