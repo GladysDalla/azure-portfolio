@@ -14,12 +14,21 @@ terraform {
       version = "~>0.9"
     }
   }
+
+  # This block configures Terraform to store its state file remotely in the
+  # Azure Storage Account you created earlier. This is essential for CI/CD.
+  backend "azurerm" {
+    resource_group_name  = "tfstate-rg"
+    storage_account_name = "tfstateresumegladys01" # Your unique backend storage name
+    container_name       = "tfstate"
+    key                  = "azure-resume.tfstate"
+  }
 }
 
 # Configure the Microsoft Azure Provider
 provider "azurerm" {
   features {}
-  
+ 
   # Disable automatic resource provider registration if you don't have permissions
   skip_provider_registration = true
 }
@@ -31,19 +40,16 @@ resource "random_string" "storage_suffix" {
   upper   = false
 }
 
-# Create a single, consistent resource group
-resource "azurerm_resource_group" "main" {
-  name     = var.resource_group_name
-  location = var.location
-
-  tags = var.tags
+# Look up the existing resource group that was created manually
+data "azurerm_resource_group" "main" {
+  name = var.resource_group_name
 }
 
 # Create a storage account for static website hosting
 resource "azurerm_storage_account" "resume_storage" {
   name                     = "azureresume${random_string.storage_suffix.result}"
-  resource_group_name      = azurerm_resource_group.main.name
-  location                 = azurerm_resource_group.main.location
+  resource_group_name      = data.azurerm_resource_group.main.name
+  location                 = data.azurerm_resource_group.main.location
   account_tier             = var.storage_account_tier
   account_replication_type = var.storage_replication_type
 
@@ -58,8 +64,8 @@ resource "azurerm_storage_account" "resume_storage" {
 # Create Application Insights
 resource "azurerm_application_insights" "resume_insights" {
   name                = "${var.project_name}-insights"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
   application_type    = "web"
 
   tags = var.tags
@@ -68,8 +74,8 @@ resource "azurerm_application_insights" "resume_insights" {
 # Create Log Analytics Workspace
 resource "azurerm_log_analytics_workspace" "resume_workspace" {
   name                = "${var.project_name}-workspace"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
   sku                 = "PerGB2018"
   retention_in_days   = var.log_analytics_retention_days
 
@@ -81,14 +87,14 @@ data "azurerm_client_config" "current" {}
 
 # Create Key Vault (WITHOUT Function App access policy initially)
 resource "azurerm_key_vault" "resume_keyvault" {
-  name                        = "${var.project_name}-kv-${random_string.storage_suffix.result}"
-  resource_group_name         = azurerm_resource_group.main.name
-  location                    = azurerm_resource_group.main.location
-  enabled_for_disk_encryption = true
-  tenant_id                   = data.azurerm_client_config.current.tenant_id
-  soft_delete_retention_days  = var.key_vault_soft_delete_retention_days
-  purge_protection_enabled    = false
-  sku_name                    = "standard"
+  name                         = "${var.project_name}-kv-${random_string.storage_suffix.result}"
+  resource_group_name          = data.azurerm_resource_group.main.name
+  location                     = data.azurerm_resource_group.main.location
+  enabled_for_disk_encryption  = true
+  tenant_id                    = data.azurerm_client_config.current.tenant_id
+  soft_delete_retention_days   = var.key_vault_soft_delete_retention_days
+  purge_protection_enabled     = false
+  sku_name                     = "standard"
 
   # Only include the current user/service principal access policy initially
   access_policy {
@@ -129,8 +135,8 @@ resource "time_sleep" "wait_for_storage" {
 # Create App Service Plan
 resource "azurerm_service_plan" "resume_plan" {
   name                = "${var.project_name}-plan"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
   os_type             = "Linux"
   sku_name            = var.function_app_sku
 
@@ -140,8 +146,8 @@ resource "azurerm_service_plan" "resume_plan" {
 # Create Cosmos DB Account for visitor counter (FIXED - removed deprecated enable_automatic_failover)
 resource "azurerm_cosmosdb_account" "resume_cosmos" {
   name                = "${var.project_name}-cosmos-${random_string.storage_suffix.result}"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
   offer_type          = "Standard"
   kind                = "GlobalDocumentDB"
 
@@ -154,7 +160,7 @@ resource "azurerm_cosmosdb_account" "resume_cosmos" {
   }
 
   geo_location {
-    location          = azurerm_resource_group.main.location
+    location          = data.azurerm_resource_group.main.location
     failover_priority = 0
   }
 
@@ -164,14 +170,14 @@ resource "azurerm_cosmosdb_account" "resume_cosmos" {
 # Create Cosmos DB SQL Database
 resource "azurerm_cosmosdb_sql_database" "resume_db" {
   name                = "resumedb"
-  resource_group_name = azurerm_resource_group.main.name
+  resource_group_name = data.azurerm_resource_group.main.name
   account_name        = azurerm_cosmosdb_account.resume_cosmos.name
 }
 
 # Create Cosmos DB SQL Container
 resource "azurerm_cosmosdb_sql_container" "visitor_counter" {
   name                  = "visitors"
-  resource_group_name   = azurerm_resource_group.main.name
+  resource_group_name   = data.azurerm_resource_group.main.name
   account_name          = azurerm_cosmosdb_account.resume_cosmos.name
   database_name         = azurerm_cosmosdb_sql_database.resume_db.name
   partition_key_path    = "/id"
@@ -199,12 +205,12 @@ resource "azurerm_key_vault_secret" "cosmos_connection" {
 # Create Function App with updated settings for visitor counter (FIXED - removed unsupported arguments)
 resource "azurerm_linux_function_app" "resume_function" {
   name                = "${var.project_name}-func-${random_string.storage_suffix.result}"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
 
-  storage_account_name       = azurerm_storage_account.resume_storage.name
-  storage_account_access_key = azurerm_storage_account.resume_storage.primary_access_key
-  service_plan_id            = azurerm_service_plan.resume_plan.id
+  storage_account_name         = azurerm_storage_account.resume_storage.name
+  storage_account_access_key   = azurerm_storage_account.resume_storage.primary_access_key
+  service_plan_id              = azurerm_service_plan.resume_plan.id
 
   site_config {
     application_stack {
@@ -212,7 +218,7 @@ resource "azurerm_linux_function_app" "resume_function" {
     }
 
     cors {
-      allowed_origins = ["*"]
+      allowed_origins     = ["*"]
       support_credentials = false
     }
 
@@ -224,20 +230,20 @@ resource "azurerm_linux_function_app" "resume_function" {
     "APPINSIGHTS_INSTRUMENTATIONKEY"        = azurerm_application_insights.resume_insights.instrumentation_key
     "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.resume_insights.connection_string
     "FUNCTIONS_WORKER_RUNTIME"              = "python"
-    "AzureWebJobsFeatureFlags"             = "EnableWorkerIndexing"
+    "AzureWebJobsFeatureFlags"              = "EnableWorkerIndexing"
     "STORAGE_CONNECTION_STRING"             = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.storage_connection.id})"
-    
+   
     # Key Vault URI for the function to access secrets using Managed Identity
-    "KEY_VAULT_URI"                        = azurerm_key_vault.resume_keyvault.vault_uri
-    
+    "KEY_VAULT_URI"                         = azurerm_key_vault.resume_keyvault.vault_uri
+   
     # Additional settings for better performance and debugging
-    "FUNCTIONS_EXTENSION_VERSION"          = "~4"
-    "WEBSITE_RUN_FROM_PACKAGE"             = "1"
-    "SCM_DO_BUILD_DURING_DEPLOYMENT"       = "true"
-    "ENABLE_ORYX_BUILD"                    = "true"
-    
+    "FUNCTIONS_EXTENSION_VERSION"           = "~4"
+    "WEBSITE_RUN_FROM_PACKAGE"              = "1"
+    "SCM_DO_BUILD_DURING_DEPLOYMENT"        = "true"
+    "ENABLE_ORYX_BUILD"                     = "true"
+   
     # Python specific settings
-    "PYTHON_ISOLATE_WORKER_DEPENDENCIES"   = "1"
+    "PYTHON_ISOLATE_WORKER_DEPENDENCIES"    = "1"
   }
 
   identity {
