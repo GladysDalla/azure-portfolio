@@ -182,13 +182,13 @@ resource "azurerm_cosmosdb_sql_database" "resume_db" {
 
 # Create Cosmos DB SQL Container
 resource "azurerm_cosmosdb_sql_container" "visitor_counter" {
-  name                  = "visitors"
-  resource_group_name   = data.azurerm_resource_group.main.name
-  account_name          = azurerm_cosmosdb_account.resume_cosmos.name
-  database_name         = azurerm_cosmosdb_sql_database.resume_db.name
-  partition_key_path    = "/id"
-  partition_key_version = 1
-  throughput            = var.cosmos_throughput
+  name                = "visitors"
+  resource_group_name = data.azurerm_resource_group.main.name
+  account_name        = azurerm_cosmosdb_account.resume_cosmos.name
+  database_name       = azurerm_cosmosdb_sql_database.resume_db.name
+  throughput          = var.cosmos_throughput
+
+  partition_key_paths = ["/id"]
 
   indexing_policy {
     indexing_mode = "consistent"
