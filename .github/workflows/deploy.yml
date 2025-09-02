@@ -37,12 +37,10 @@ jobs:
     - name: Terraform Init
       run: terraform init
       env:
-        # Authentication for both provider and backend
         ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
         ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-        # Backend authentication
         ARM_ACCESS_KEY: ${{ secrets.ARM_ACCESS_KEY }}
 
     - name: Terraform Plan
@@ -107,12 +105,9 @@ jobs:
         python -m pytest tests/ -v
 
     - name: Azure Login
-      uses: azure/login@v2
+      uses: azure/login@v1
       with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Deploy to Azure Function App
       uses: Azure/functions-action@v1
@@ -148,11 +143,9 @@ jobs:
         npm run build
 
     - name: Azure Login
-      uses: azure/login@v2
+      uses: azure/login@v1
       with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Deploy to Azure Storage
       uses: azure/CLI@v1
