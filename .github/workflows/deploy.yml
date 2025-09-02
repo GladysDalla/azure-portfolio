@@ -70,6 +70,12 @@ jobs:
         TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
 
+    - name: Azure Login for Outputs
+      if: github.ref == 'refs/heads/main'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
     - name: Get Terraform Outputs
       if: github.ref == 'refs/heads/main'
       id: terraform_output
@@ -81,6 +87,12 @@ jobs:
         echo "website_url=$(terraform output -raw website_url)" >> $GITHUB_OUTPUT
         echo "Debug - Function App Name: $(terraform output -raw function_app_name)"
         echo "Debug - Storage Account Name: $(terraform output -raw storage_account_name)"
+      env:
+        ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        ARM_ACCESS_KEY: ${{ secrets.ARM_ACCESS_KEY }}
 
   build-and-deploy-backend:
     name: 'Build and Deploy Backend'
