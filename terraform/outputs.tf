@@ -27,3 +27,13 @@ output "cosmos_db_name" {
   description = "Name of the Cosmos DB Account"
   value       = azurerm_cosmosdb_account.resume_cosmos.name
 }
+
+# Debug outputs to help troubleshoot
+output "debug_info" {
+  description = "Debug information"
+  value = {
+    function_app_id = azurerm_linux_function_app.resume_function.id
+    storage_account_id = azurerm_storage_account.resume_storage.id
+    terraform_workspace = terraform.workspace
+  }
+}

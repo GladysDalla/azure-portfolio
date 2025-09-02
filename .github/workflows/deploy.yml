@@ -74,9 +74,13 @@ jobs:
       if: github.ref == 'refs/heads/main'
       id: terraform_output
       run: |
+        echo "Getting Terraform outputs..."
+        terraform output
         echo "function_app_name=$(terraform output -raw function_app_name)" >> $GITHUB_OUTPUT
         echo "storage_account_name=$(terraform output -raw storage_account_name)" >> $GITHUB_OUTPUT
         echo "website_url=$(terraform output -raw website_url)" >> $GITHUB_OUTPUT
+        echo "Debug - Function App Name: $(terraform output -raw function_app_name)"
+        echo "Debug - Storage Account Name: $(terraform output -raw storage_account_name)"
 
   build-and-deploy-backend:
     name: 'Build and Deploy Backend'
@@ -108,6 +112,14 @@ jobs:
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Debug Function App Name
+      run: |
+        echo "Function App Name from Terraform: '${{ needs.terraform.outputs.function_app_name }}'"
+        if [ -z "${{ needs.terraform.outputs.function_app_name }}" ]; then
+          echo "ERROR: Function App Name is empty!"
+          exit 1
+        fi
 
     - name: Deploy to Azure Function App
       uses: Azure/functions-action@v1
